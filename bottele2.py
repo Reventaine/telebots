@@ -45,14 +45,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def gif(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     contents = requests.get(
-        'https://api.giphy.com/v1/gifs/random?api_key=HEpBPk8ptZEhZTuiLsyZutBJxDMZDrst&tag=&rating=pg-13').json()
+        'https://api.giphy.com/v1/gifs/random?api_key=*KEY*&tag=&rating=pg-13').json()
     data = contents['data']
     url = data['bitly_url']
     await update.message.reply_text(url)
 
 
 if __name__ == '__main__':
-    application = Application.builder().token("5360990261:AAGMygeJJbzHeRRkDfc9KIcdDDOF-vF_66s").build()
+    application = Application.builder().token("*TOKEN*").build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("gif", gif))
     application.add_handler(CallbackQueryHandler(button))
