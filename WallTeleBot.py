@@ -44,7 +44,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 if __name__ == '__main__':
-    application = Application.builder().token("5477830087:AAFT4qQh_lQcMqdsCq40RFaVkpF03Zg4tgo").build()
+    application = Application.builder().token("*TOKEN*").build()
     application.add_handler(CommandHandler("Wallpaper", wallpaper))
     application.add_handler(CallbackQueryHandler(button))
     application.run_polling()
