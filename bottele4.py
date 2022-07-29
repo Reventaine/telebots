@@ -80,7 +80,7 @@ async def gif(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def button2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     def gify():
         contents = requests.get(
-            f'https://api.giphy.com/v1/gifs/random?api_key=HEpBPk8ptZEhZTuiLsyZutBJxDMZDrst&tag={query.data}rating=pg-13').json()
+            f'https://api.giphy.com/v1/gifs/random?api_key=*KEY*&tag={query.data}rating=pg-13').json()
         data = contents['data']
         url = data['bitly_url']
         return url
@@ -91,7 +91,7 @@ async def button2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def main() -> None:
-    application = Application.builder().token("5560967942:AAHdVlB1vMfEwmU1Fl5-NwmtYtgq_Omo3SM").build()
+    application = Application.builder().token("*TOKEN*").build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
