@@ -1,6 +1,6 @@
 import logging
-from bs4 import BeautifulSoup
 import requests
+import lyricsgenius as lyricg
 
 from telegram import __version__ as TG_VER
 
@@ -15,7 +15,7 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"{TG_VER} version of this example, "
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
-from telegram import  Update
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -31,8 +31,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
+                       excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
-TYPING_ARTIST, TYPING_SONG = range(2)
+TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -41,39 +43,65 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    artist = str(update.message.text).replace(' ', '-')
+    artist = update.message.text
     context.user_data["artist"] = artist
     await update.message.reply_text(f'Great! Now enter a name of their song.')
     return TYPING_SONG
 
 
 async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     artist = context.user_data["artist"]
-    songname = str(update.message.text).replace(' ', '-')
+    songname = update.message.text
+    song = genius.search_song(artist, songname)
 
     def get_lyric():
-        url = f"https://www.letras.mus.br/{artist}/{songname}/"
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        lyric = soup.find("div", {"class": "cnt-letra p402_premium"})
-        lyrics = str(lyric).replace('<div class="cnt-letra p402_premium">', "") \
-            .replace("</div>", "") \
-            .replace("<br/>", "\n") \
-            .replace("</br>", "\n") \
-            .replace("<br>", "\n") \
-            .replace("</br>", "\n") \
-            .replace("</p><p>", "\n\n") \
-            .replace("</p>", "") \
-            .replace("<p>", "").strip()
-        return lyrics
+        return song.lyrics.replace("Lyrics", '\r\n\r\n') \
+            .replace("3Embed", "") \
+            .replace("Embed", "") \
+            .replace(songname.capitalize(), "", 1)
 
+    def cover():
+        cover_art = song.song_art_image_thumbnail_url
+        return cover_art
 
-    await update.message.reply_text(f"*{str(artist).replace('-', ' ').upper()} \- {songname.replace('-', ' ').capitalize()}*", parse_mode='MarkdownV2')
+    await update.message.reply_text(f"*{artist.upper()} \- {songname.capitalize()}*", parse_mode='MarkdownV2')
+    await update.message.reply_photo(cover())
     await update.message.reply_text(get_lyric())
 
     context.user_data.clear()
     return ConversationHandler.END
+
+
+async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(f'Hello! Enter some lyrics to find.')
+    return TYPING_LYRIC
+
+
+async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+    lyricp = update.message.text
+
+    def get_titles():
+        result = []
+        request = genius.search_all(lyricp)
+        for hit in request['sections'][0]['hits']:
+            result.append(hit['result']['full_title'])
+        titles = '\r\n'.join(result)
+        return titles
+
+    await update.message.reply_text(f'''This is the songs with "{lyricp}" piece of lyrics:''')
+    await update.message.reply_text(get_titles())
+    return ConversationHandler.END
+
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(f'Hello!'
+                                    f'\r\nWith my help you can find lyrics for a songs'
+                                    f' - just /start,'
+                                    f' \r\nOR you can find a songs FROM lyrics'
+                                    f' - /lyricsearch.'
+                                    f'\r\nIf you meet any trouble - /done and restart.'
+                                    f'\r\nThank you!')
 
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -84,12 +112,11 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 def main() -> None:
     """Run the bot."""
-    # Create the Application and pass it your bot's token.
+
     application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
 
-    # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
         states={
             TYPING_ARTIST: [
                 MessageHandler(
@@ -101,12 +128,21 @@ def main() -> None:
                     filters.TEXT & ~(filters.COMMAND | filters.Regex("^/done$")), get_song
                 )
             ],
+            TYPING_LYRIC: [
+                MessageHandler(
+                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^/done$")), bylyrics
+                )
+            ],
         },
         fallbacks=[MessageHandler(filters.Regex("^/done$"), done)],
     )
 
+
+    application.add_handler(CommandHandler("Help", help))
+
     application.add_handler(conv_handler)
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
