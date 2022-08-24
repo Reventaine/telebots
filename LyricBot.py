@@ -31,7 +31,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
+genius = lyricg.Genius("TOKEN", skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
 TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
@@ -113,7 +113,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def main() -> None:
     """Run the bot."""
 
-    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
+    application = Application.builder().token("TOKEN").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
