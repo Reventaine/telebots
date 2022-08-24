@@ -64,7 +64,7 @@ async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         cover_art = song.song_art_image_thumbnail_url
         return cover_art
 
-    await update.message.reply_text(f"*{artist.upper()} \- {songname.capitalize()}*", parse_mode='MarkdownV2')
+    await update.message.reply_text(f"*{artist.upper()} \- {songname.title()}*", parse_mode='MarkdownV2')
     await update.message.reply_photo(cover())
     await update.message.reply_text(get_lyric())
 
