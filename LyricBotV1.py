@@ -92,7 +92,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Application and pass it your bot's token.
-    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
+    application = Application.builder().token("TOKEN").build()
 
     # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
     conv_handler = ConversationHandler(
