@@ -1,5 +1,4 @@
 import logging
-import requests
 import lyricsgenius as lyricg
 
 from telegram import __version__ as TG_VER
@@ -31,18 +30,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-genius = lyricg.Genius("TOKEN", skip_non_songs=True,
+genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
 TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     await update.message.reply_text(text=f'Hello! Enter an artist name please.')
     return TYPING_ARTIST
 
 
 async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     artist = update.message.text
     context.user_data["artist"] = artist
     await update.message.reply_text(f'Great! Now enter a name of their song.')
@@ -50,6 +51,7 @@ async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     artist = context.user_data["artist"]
     songname = update.message.text
     song = genius.search_song(artist, songname)
@@ -65,14 +67,21 @@ async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return cover_art
 
     await update.message.reply_text(f"*{artist.upper()} \- {songname.title()}*", parse_mode='MarkdownV2')
-    await update.message.reply_photo(cover())
-    await update.message.reply_text(get_lyric())
 
-    context.user_data.clear()
-    return ConversationHandler.END
+    try:
+        await update.message.reply_photo(cover())
+        await update.message.reply_text(get_lyric())
+
+    except AttributeError:
+        await update.message.reply_text("Song not found")
+
+    finally:
+        context.user_data.clear()
+        return ConversationHandler.END
 
 
 async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     await update.message.reply_text(f'Hello! Enter some lyrics to find.')
     return TYPING_LYRIC
 
@@ -89,12 +98,19 @@ async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         titles = '\r\n'.join(result)
         return titles
 
-    await update.message.reply_text(f'''This is the songs with "{lyricp}" piece of lyrics:''')
-    await update.message.reply_text(get_titles())
-    return ConversationHandler.END
+    try:
+        await update.message.reply_text(f'''This is the songs with "{lyricp}" piece of lyrics:''')
+        await update.message.reply_text(get_titles())
+
+    except KeyError:
+        await update.message.reply_text('There is no songs with such lyrics found')
+
+    finally:
+        return ConversationHandler.END
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     await update.message.reply_text(f'Hello!'
                                     f'\r\nWith my help you can find lyrics for a songs'
                                     f' - just /start,'
@@ -103,8 +119,12 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
                                     f'\r\nIf you meet any trouble - /done and restart.'
                                     f'\r\nThank you!')
 
+    context.user_data.clear()
+    return ConversationHandler.END
+
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
     context.user_data.clear()
     await update.message.reply_text("Start again soon!")
     return ConversationHandler.END
@@ -113,7 +133,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def main() -> None:
     """Run the bot."""
 
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
