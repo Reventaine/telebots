@@ -1,6 +1,7 @@
-import logging, random, requests, re
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ForceReply, Update
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+import logging, random
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
+from telegram.error import TimedOut
 
 from telegram import __version__ as TG_VER
 try:
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 async def wallpaper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
     keyboard = [
         [
             InlineKeyboardButton("Phone", callback_data="1284/2778"),
@@ -28,23 +30,42 @@ async def wallpaper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ],
         [InlineKeyboardButton("Desktop", callback_data="4096/2160")],
     ]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     await update.message.reply_text("Please choose device:", reply_markup=reply_markup)
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    query = update.callback_query
+
     def random_img():
-        n = random.randint(1, 10000000)
+        n = random.randint(1, 10000)
         url = f'https://picsum.photos/{query.data}?random={str(n)}'
         return url
-    query = update.callback_query
+
     await query.answer()
-    await query.edit_message_text(text='This is your wallpaper:')
-    await query.message.reply_photo(random_img())
+    await query.edit_message_text('Searching for an awesome wallpaper...')
+
+    try:
+        await query.message.reply_photo(random_img())
+        await query.edit_message_text('This is your wallpaper:')
+
+    except TimedOut:
+
+        await query.edit_message_text("This might take a while...")
+
+        try:
+            await query.message.reply_photo(random_img())
+            await query.edit_message_text('This is your wallpaper:')
+
+        except TimedOut:
+            await query.edit_message_text(f'Something went wrong :(\nTry again')
 
 
 if __name__ == '__main__':
-    application = Application.builder().token("*TOKEN*").build()
+    application = Application.builder().token("5477830087:AAFT4qQh_lQcMqdsCq40RFaVkpF03Zg4tgo").build()
     application.add_handler(CommandHandler("Wallpaper", wallpaper))
     application.add_handler(CallbackQueryHandler(button))
     application.run_polling()
