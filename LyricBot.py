@@ -90,17 +90,27 @@ async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     lyricp = update.message.text
 
     result = []
+    result2 = []
+    piece = []
+    
     try:
         request = genius.search_all(lyricp)
+        
         for hit in request['sections'][0]['hits']:
             result.append(hit['result']['full_title'])
+            piece.append(hit['highlights'][0]['value'])
         for hit in request['sections'][1]['hits']:
-            result.append(hit['result']['full_title'])
+            result2.append(hit['result']['full_title'])
 
         await update.message.reply_text(f'''This is the songs with "{lyricp}" piece of lyrics:''')
-        for index, item in enumerate(result, start=1):
+
+        for index, item in enumerate(result):
+            await update.effective_user.send_message(f'{index+1}) {item} \n\n...{piece[index]}...')
+        for index, item in enumerate(result2, start=4):
             await update.effective_user.send_message(f'{index}) {item}')
+
         return ConversationHandler.END
+
     except: await update.message.reply_text("Something went wrong")
 
 
