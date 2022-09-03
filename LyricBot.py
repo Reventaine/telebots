@@ -1,5 +1,6 @@
 import logging
 import lyricsgenius as lyricg
+import re
 
 from telegram import __version__ as TG_VER
 
@@ -30,20 +31,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-genius = lyricg.Genius('TOKEN', skip_non_songs=True,
+genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
 TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     await update.message.reply_text(text=f'Hello! Enter an artist name please.')
     return TYPING_ARTIST
 
 
 async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     artist = update.message.text
     context.user_data["artist"] = artist
     await update.message.reply_text(f'Great! Now enter a name of their song.')
@@ -51,16 +50,18 @@ async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     artist = context.user_data["artist"]
     songname = update.message.text
     song = genius.search_song(artist, songname)
 
     def get_lyric():
-        return song.lyrics.replace("Lyrics", '\r\n\r\n') \
+
+        text = song.lyrics.replace("Lyrics", '\r\n\r\n') \
             .replace("3Embed", "") \
             .replace("Embed", "") \
             .replace(songname.capitalize(), "", 1)
+        redacted = re.sub(r".\d", "", text)
+        return redacted
 
     def cover():
         cover_art = song.song_art_image_thumbnail_url
@@ -72,7 +73,7 @@ async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_photo(cover())
         await update.message.reply_text(get_lyric())
 
-    except AttributeError:
+    except:
         await update.message.reply_text("Song not found")
 
     finally:
@@ -81,36 +82,29 @@ async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     await update.message.reply_text(f'Hello! Enter some lyrics to find.')
     return TYPING_LYRIC
 
 
 async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     lyricp = update.message.text
 
-    def get_titles():
-        result = []
+    result = []
+    try:
         request = genius.search_all(lyricp)
         for hit in request['sections'][0]['hits']:
             result.append(hit['result']['full_title'])
-        titles = '\r\n'.join(result)
-        return titles
+        for hit in request['sections'][1]['hits']:
+            result.append(hit['result']['full_title'])
 
-    try:
         await update.message.reply_text(f'''This is the songs with "{lyricp}" piece of lyrics:''')
-        await update.message.reply_text(get_titles())
-
-    except KeyError:
-        await update.message.reply_text('There is no songs with such lyrics found')
-
-    finally:
+        for index, item in enumerate(result, start=1):
+            await update.effective_user.send_message(f'{index}) {item}')
         return ConversationHandler.END
+    except: await update.message.reply_text("Something went wrong")
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     await update.message.reply_text(f'Hello!'
                                     f'\r\nWith my help you can find lyrics for a songs'
                                     f' - just /start,'
@@ -124,42 +118,37 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     context.user_data.clear()
     await update.message.reply_text("Start again soon!")
     return ConversationHandler.END
 
 
 def main() -> None:
-    """Run the bot."""
-
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
         states={
             TYPING_ARTIST: [
                 MessageHandler(
-                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^/done$")), get_artist
+                    filters.TEXT, get_artist
                 )
             ],
             TYPING_SONG: [
                 MessageHandler(
-                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^/done$")), get_song
+                    filters.TEXT, get_song
                 )
             ],
             TYPING_LYRIC: [
                 MessageHandler(
-                    filters.TEXT & ~(filters.COMMAND | filters.Regex("^/done$")), bylyrics
+                    filters.TEXT, bylyrics,
                 )
             ],
         },
-        fallbacks=[MessageHandler(filters.Regex("^/done$"), done)],
+        fallbacks=[MessageHandler(filters.Regex("^/done$"), done)], allow_reentry=True,
     )
-
-
+    application.add_handler(CommandHandler("done", done))
     application.add_handler(CommandHandler("Help", help))
-
     application.add_handler(conv_handler)
     application.run_polling()
 
