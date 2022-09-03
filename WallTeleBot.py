@@ -26,14 +26,14 @@ async def wallpaper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [
             InlineKeyboardButton("Phone", callback_data="1284/2778"),
-            InlineKeyboardButton("Pad", callback_data="2048/2732"),
+            InlineKeyboardButton("iPad", callback_data="1640/2360"),
         ],
         [InlineKeyboardButton("Desktop", callback_data="4096/2160")],
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Please choose device:", reply_markup=reply_markup)
+    await update.effective_user.send_message(text="Please choose device:", reply_markup=reply_markup)
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -63,9 +63,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         except TimedOut:
             await query.edit_message_text(f'Something went wrong :(\nTry again')
 
+    finally:
+        return await wallpaper(update, context)
+
 
 if __name__ == '__main__':
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token("5477830087:AAFT4qQh_lQcMqdsCq40RFaVkpF03Zg4tgo").build()
     application.add_handler(CommandHandler("Wallpaper", wallpaper))
     application.add_handler(CallbackQueryHandler(button))
     application.run_polling()
