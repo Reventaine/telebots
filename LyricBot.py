@@ -1,6 +1,8 @@
 import logging
 import lyricsgenius as lyricg
-import re
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+
 
 from telegram import __version__ as TG_VER
 
@@ -31,8 +33,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-genius = lyricg.Genius('GENIUS_TOKEN', skip_non_songs=True,
+
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id="d57ce86eacaf4f4282d1da003edc2275",
+                                                           client_secret="1e8652aa32dc4c4a94bab6613bf8f085",
+                                                           redirect_uri="http://127.0.0.1:9090",
+                                                           scope="user-read-currently-playing"))
+
+genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
+
 
 TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
 
@@ -49,36 +58,41 @@ async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return TYPING_SONG
 
 
-async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    artist = context.user_data["artist"]
-    songname = update.message.text
-    song = genius.search_song(artist, songname)
-
-    def get_lyric():
+async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    try:
+        song = genius.search_song(artist, songname)
 
         text = song.lyrics.replace("Lyrics", '\r\n\r\n') \
-            .replace("3Embed", "") \
-            .replace("Embed", "") \
-            .replace(songname.capitalize(), "", 1)
-        redacted = re.sub(r".\d", "", text)
-        return redacted
+                .replace("3Embed", "") \
+                .replace("Embed", "") \
+                .replace(songname.title(), "", 1)
 
-    def cover():
-        cover_art = song.song_art_image_thumbnail_url
-        return cover_art
+        cover = song.song_art_image_thumbnail_url
 
-    await update.message.reply_text(f"*{artist.upper()} \- {songname.title()}*", parse_mode='MarkdownV2')
+        await update.effective_user.send_message(f"*{artist.title()} \- {songname.title()}*", parse_mode='MarkdownV2')
 
-    try:
-        await update.message.reply_photo(cover())
-        await update.message.reply_text(get_lyric())
+        await update.effective_user.send_photo(cover)
+        await update.effective_user.send_message(text)
 
     except:
-        await update.message.reply_text("Song not found")
+        await update.effective_user.send_message(f"Song not found or has no lyrics")
 
-    finally:
-        context.user_data.clear()
-        return ConversationHandler.END
+
+async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    global artist, songname
+    artist = context.user_data["artist"]
+    songname = update.message.text
+
+    await get_text(update, context)
+
+
+async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    results3 = sp.current_user_playing_track()
+    global songname, artist
+    songname = (results3['item']['name'])
+    artist = (results3['item']['artists'][0]['name'])
+
+    await get_text(update, context)
 
 
 async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -92,10 +106,9 @@ async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     result = []
     result2 = []
     piece = []
-    
+
     try:
         request = genius.search_all(lyricp)
-        
         for hit in request['sections'][0]['hits']:
             result.append(hit['result']['full_title'])
             piece.append(hit['highlights'][0]['value'])
@@ -117,24 +130,23 @@ async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(f'Hello!'
                                     f'\r\nWith my help you can find lyrics for a songs'
-                                    f' - just /start,'
+                                    f' - /start,'
+                                    f'\r\nSearch lyrics for current playing spotify song - /spotify'
                                     f' \r\nOR you can find a songs FROM lyrics'
                                     f' - /lyricsearch.'
-                                    f'\r\nIf you meet any trouble - /done and restart.'
-                                    f'\r\nThank you!')
-
+                                    f'\r\nIf you meet any trouble - /done and restart.')
     context.user_data.clear()
     return ConversationHandler.END
 
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
-    await update.message.reply_text("Start again soon!")
+    await update.message.reply_text("Restart!")
     return ConversationHandler.END
 
 
 def main() -> None:
-    application = Application.builder().token("Tele_token").build()
+    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
@@ -159,6 +171,7 @@ def main() -> None:
     )
     application.add_handler(CommandHandler("done", done))
     application.add_handler(CommandHandler("Help", help))
+    application.add_handler(CommandHandler("spotify", spotify))
     application.add_handler(conv_handler)
     application.run_polling()
 
