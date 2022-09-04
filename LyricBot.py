@@ -34,12 +34,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id="d57ce86eacaf4f4282d1da003edc2275",
-                                                           client_secret="1e8652aa32dc4c4a94bab6613bf8f085",
-                                                           redirect_uri="http://127.0.0.1:9090",
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id="CLIENT_ID",
+                                                           client_secret="CLIENT_SECRET",
+                                                           redirect_uri="URL",
                                                            scope="user-read-currently-playing"))
 
-genius = lyricg.Genius('y68cnKKehPUYg71FEJecoZHFF5Wniyyuri0-Ea7H3yDhV6wKAGsTODyhn2yElA-a', skip_non_songs=True,
+genius = lyricg.Genius('GENIUSTOKEN', skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
 
@@ -146,7 +146,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 def main() -> None:
-    application = Application.builder().token("5453334258:AAGTg24fHyY_WpuB6Cc8uo2hWBtjJN-nhzM").build()
+    application = Application.builder().token("TOKEN").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
