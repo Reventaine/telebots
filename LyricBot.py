@@ -34,11 +34,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id="CLIENT_ID",
-                                                           client_secret="CLIENT_SECRET",
-                                                           redirect_uri="URL",
-                                                           scope="user-read-currently-playing"))
-
 genius = lyricg.Genius('GENIUSTOKEN', skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
@@ -87,12 +82,25 @@ async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    results3 = sp.current_user_playing_track()
-    global songname, artist
-    songname = (results3['item']['name'])
-    artist = (results3['item']['artists'][0]['name'])
+    try:
+        spoty = SpotifyOAuth(client_id="CLIENT_ID",
+                                        client_secret="CLIENT_SECRET",
+                                        redirect_uri="URI",
+                                        scope="user-read-currently-playing",
+                                        username=update.effective_user.id,
+                                        open_browser=False)
 
-    await get_text(update, context)
+        sp = spotipy.Spotify(auth_manager=spoty)
+
+        results3 = sp.current_user_playing_track()
+        global songname, artist
+        songname = (results3['item']['name'])
+        artist = (results3['item']['artists'][0]['name'])
+
+        await get_text(update, context)
+
+    except:
+        await update.effective_user.send_message(f"Nothing is playing or current song has no lyrics")
 
 
 async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
