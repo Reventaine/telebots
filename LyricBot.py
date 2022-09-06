@@ -1,8 +1,15 @@
 import logging
 import lyricsgenius as lyricg
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
-
+from github import Github
+import json
+from config import githubToken as githubToken,\
+                   geniusToken as geniusToken,\
+                   telegramToken as telegramToken, \
+                   client_id as client_id, \
+                   client_secret as client_secret,\
+                   redirect_uri as redirect_url, \
+                   url as url
 
 from telegram import __version__ as TG_VER
 
@@ -33,24 +40,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+github = Github(githubToken)
+repository = github.get_user().get_repo('cache-spotify')
+contents = repository.get_contents("")
 
-genius = lyricg.Genius('GENIUSTOKEN', skip_non_songs=True,
+
+genius = lyricg.Genius(geniusToken, skip_non_songs=True,
                        excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False, verbose=True, retries=10)
 
 
-TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC = range(3)
+TYPING_ARTIST, TYPING_SONG, TYPING_LYRIC, TOKEN = range(4)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(text=f'Hello! Enter an artist name please.')
+    await update.message.reply_text(text=f'Enter an artist name please.')
     return TYPING_ARTIST
 
 
 async def get_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     artist = update.message.text
     context.user_data["artist"] = artist
-    await update.message.reply_text(f'Great! Now enter a name of their song.')
+    await update.message.reply_text(f'Now enter a name of their song.')
     return TYPING_SONG
+
+
+async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    global artist, songname
+    artist = context.user_data["artist"]
+    songname = update.message.text
+
+    await get_text(update, context)
 
 
 async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -64,43 +83,45 @@ async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         cover = song.song_art_image_thumbnail_url
 
-        await update.effective_user.send_message(f"*{artist.title()} \- {songname.title()}*", parse_mode='MarkdownV2')
+        await update.message.reply_text(f"*{artist.title()} \- {songname.title()}*", parse_mode='MarkdownV2')
 
-        await update.effective_user.send_photo(cover)
-        await update.effective_user.send_message(text)
+        await update.message.reply_photo(cover)
+        await update.message.reply_text(text)
 
     except:
-        await update.effective_user.send_message(f"Song not found or has no lyrics")
-
-
-async def get_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    global artist, songname
-    artist = context.user_data["artist"]
-    songname = update.message.text
-
-    await get_text(update, context)
+        await update.message.reply_text(f"Song not found or has no lyrics")
 
 
 async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    global songname, artist
     try:
-        spoty = SpotifyOAuth(client_id="CLIENT_ID",
-                                        client_secret="CLIENT_SECRET",
-                                        redirect_uri="URI",
-                                        scope="user-read-currently-playing",
-                                        username=update.effective_user.id,
-                                        open_browser=False)
+        file = repository.get_contents(f'.cache-{update.effective_user.id}')
+        f = open(f'.cache-{update.effective_user.id}', 'w')
+        f.write(file.decoded_content.decode())
+        f.close()
 
-        sp = spotipy.Spotify(auth_manager=spoty)
+        cache_handler = spotipy.cache_handler.CacheFileHandler(username=update.effective_user.id)
+        auth_manager = spotipy.oauth2.SpotifyOAuth(client_id=client_id,
+                                                    client_secret=client_secret,
+                                                    redirect_uri=redirect_url,
+                                                    scope="user-read-currently-playing",
+                                                    cache_handler=cache_handler,
+                                                    show_dialog=True)
+
+        sp = spotipy.Spotify(auth_manager=auth_manager)
 
         results3 = sp.current_user_playing_track()
-        global songname, artist
         songname = (results3['item']['name'])
         artist = (results3['item']['artists'][0]['name'])
 
         await get_text(update, context)
 
-    except:
-        await update.effective_user.send_message(f"Nothing is playing or current song has no lyrics")
+    except spotipy.exceptions.SpotifyException:
+        await update.message.reply_text(
+            f'Please go here and send link back to this chat: \n[SPOTIFY LOG IN]({url})', parse_mode='MarkdownV2')
+        return TOKEN
+    except TypeError:
+        await update.message.reply_text(f"Song not found or has no lyrics")
 
 
 async def lyricsearch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -153,11 +174,52 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+async def token(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(f'Please go here and send link back to this chat: \n[SPOTIFY LOG IN]({url})', parse_mode='MarkdownV2')
+    return TOKEN
+
+def get_token(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    spoty = spotipy.SpotifyOAuth(client_id=client_id,
+                                 client_secret=client_secret,
+                                 redirect_uri=redirect_url,
+                                 scope="user-read-currently-playing",
+                                 username=update.effective_user.id,
+                                 open_browser=False)
+
+    code = codeR
+    f = open(f'.cache-{update.effective_user.id}', 'w')
+    tokenJS = json.dumps(spoty.get_access_token(code=code, as_dict=True, check_cache=False))
+    f.write(tokenJS)
+    cachesUpdated = []
+    for content_file in contents:
+        cachesUpdated.append(content_file)
+    if f'.cache-{update.effective_user.id}' in str(cachesUpdated):
+        contentCache = repository.get_contents(f'.cache-{update.effective_user.id}')
+        repository.update_file(f'.cache-{update.effective_user.id}', 'update token', tokenJS, contentCache.sha, branch="main")
+    else:
+        repository.create_file(f'.cache-{update.effective_user.id}', "create_token", tokenJS)
+
+    f.close()
+
+async def token2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    global codeR
+    # Get the authorization verifier code from the callback url
+    text = update.message.text
+    codeR = text.replace('http://127.0.0.1:9090/?code=', '')
+    get_token(update, context)
+    await update.message.reply_text('Success. \nNow you can use /spotify function')
+
+
 def main() -> None:
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token(telegramToken).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start), CommandHandler("lyricsearch", lyricsearch)],
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("lyricsearch", lyricsearch),
+            CommandHandler("token", token),
+            CommandHandler("spotify", spotify)
+        ],
         states={
             TYPING_ARTIST: [
                 MessageHandler(
@@ -174,12 +236,16 @@ def main() -> None:
                     filters.TEXT, bylyrics,
                 )
             ],
+            TOKEN: [
+                MessageHandler(
+                    filters.TEXT, token2,
+                )
+            ],
         },
-        fallbacks=[MessageHandler(filters.Regex("^/done$"), done)], allow_reentry=True,
+        fallbacks=[MessageHandler(filters.Regex("^/done$"), done), CommandHandler("token", token)], allow_reentry=True,
     )
     application.add_handler(CommandHandler("done", done))
     application.add_handler(CommandHandler("Help", help))
-    application.add_handler(CommandHandler("spotify", spotify))
     application.add_handler(conv_handler)
     application.run_polling()
 
