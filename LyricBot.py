@@ -116,7 +116,7 @@ async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         await get_text(update, context)
 
-    except spotipy.exceptions.SpotifyException:
+    except spotipy.exceptions.SpotifyException and json.decoder.JSONDecodeError:
         await update.message.reply_text(
             f'Please go here and send link back to this chat: \n[SPOTIFY LOG IN]({url})', parse_mode='MarkdownV2')
         return TOKEN
