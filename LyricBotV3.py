@@ -95,22 +95,6 @@ async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     except:
         await update.message.reply_text(f"Song not found or has no lyrics")
 
-    await update.message.reply_audio(await get_audio(update, context))
-
-async def get_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    url = "https://spotify-scraper.p.rapidapi.com/v1/track/download/soundcloud"
-
-    querystring = {"track": f"{update.message.text}", "quality": "sq"}
-
-    headers = {
-        "X-RapidAPI-Key": "014eefd150mshba5089faf565a46p13f492jsn3b657ae08e0c",
-        "X-RapidAPI-Host": "spotify-scraper.p.rapidapi.com"
-    }
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-
-    return json.loads(response.text)['soundcloudTrack']['audio'][0]['url']
-
 
 async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     global songname, artist
