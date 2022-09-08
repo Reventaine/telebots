@@ -180,8 +180,11 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def token(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(f'Please go here and send link back to this chat: \n[SPOTIFY LOG IN]({url})',
-                                    parse_mode='MarkdownV2')
+    logo = 'https://raw.githubusercontent.com/Reventaine/cache-spotify/main/Spotify_logo_with_text.svg.png?' \
+           'token=GHSAT0AAAAAABX435PSOGJKACUPKFC6D34OYY2JLCA'
+    await update.message.reply_photo(photo=logo,
+                                     caption=f'Please go here and send link back to this chat: '
+                                             f'\n[SPOTIFY LOG IN]({url})', parse_mode='MarkdownV2')
     return TOKEN
 
 
