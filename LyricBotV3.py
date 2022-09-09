@@ -1,8 +1,11 @@
 import logging
 import lyricsgenius as lyricg
 import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 from github import Github
-import json, requests
+from youtubesearchpython import VideosSearch
+import yt_dlp
+import json
 from config import githubToken as githubToken, \
     geniusToken as geniusToken, \
     telegramToken as telegramToken, \
@@ -50,6 +53,23 @@ genius = lyricg.Genius(geniusToken, skip_non_songs=True,
 TYPING_LYRIC, TOKEN = range(2)
 
 
+def getAudio():
+    videoSearch = VideosSearch(f'{artist} {songname}', limit=1)
+
+    video_url = videoSearch.result()['result'][0]['link']
+
+    filename = f"{artist} - {songname}.mp3"
+    ydl_opts = {
+        'format': 'mp3/bestaudio/best',
+        'outtmpl': filename,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download(video_url)
+
+    return open(f"{artist} - {songname}.mp3", 'rb')
+
+
 async def songlyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=client_id,
                                                                              client_secret=client_secret))
@@ -64,13 +84,12 @@ async def songlyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    try:
         song = genius.search_song(artist, songname)
 
         text = song.lyrics.replace("Lyrics", '\r\n\r\n') \
             .replace("3Embed", "") \
             .replace("Embed", "") \
-            .replace(songname.title(), "", 1)
+            .replace(songname.title(), "", 1) \
 
         if text[-1].isdigit():
             text = text[:-1]
@@ -80,13 +99,14 @@ async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         cover = song.song_art_image_thumbnail_url
 
-        await update.message.reply_text(f"*{artist.title()} \- {songname.title()}*", parse_mode='MarkdownV2')
+        await update.message.reply_photo(cover,
+                                         caption=f"*{artist.title()} \- {songname.title()}*",
+                                         parse_mode='MarkdownV2')
 
-        await update.message.reply_photo(cover)
         await update.message.reply_text(text)
 
-    except:
-        await update.message.reply_text(f"Song not found or has no lyrics")
+        if update.message.text != "/spotify":
+            await update.message.reply_audio(getAudio())
 
 
 async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
