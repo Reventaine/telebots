@@ -74,13 +74,17 @@ async def songlyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=client_id,
                                                                              client_secret=client_secret))
 
-    result = sp.search(q=update.message.text, limit=1, type='track')
+    try:
+        result = sp.search(q=update.message.text, limit=1, type='track')
 
-    global artist, songname
-    artist = result['tracks']['items'][0]['artists'][0]['name']
-    songname = result['tracks']['items'][0]['name']
+        global artist, songname
+        artist = result['tracks']['items'][0]['artists'][0]['name']
+        songname = result['tracks']['items'][0]['name']
 
-    return await get_text(update, context)
+        return await get_text(update, context)
+
+    except IndexError:
+        await update.message.reply_text(f"Song not found or has no lyrics")
 
 
 async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -100,8 +104,8 @@ async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         cover = song.song_art_image_thumbnail_url
 
         await update.message.reply_photo(cover,
-                                         caption=f"*{artist.title()} \- {songname.title()}*",
-                                         parse_mode='MarkdownV2')
+                                         caption=f"<b>{artist.title()}</b> - <b>{songname.title()}</b>",
+                                         parse_mode='HTML')
 
         await update.message.reply_text(text)
 
@@ -137,6 +141,7 @@ async def spotify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             f'Please go here and send link back to this chat: \n[SPOTIFY LOG IN]({url})', parse_mode='MarkdownV2')
         return TOKEN
+
     except TypeError:
         await update.message.reply_text(f"Song not found or has no lyrics")
 
@@ -176,13 +181,10 @@ async def bylyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(f'Hello!'
-                                    f'\r\nWith my help you can find lyrics for a songs'
-                                    f' - /start,'
-                                    f'\r\nSearch lyrics for current playing spotify song - /spotify'
-                                    f' \r\nOR you can find a songs FROM lyrics'
-                                    f' - /lyricsearch.'
-                                    f'\r\nIf you meet any trouble - /done and restart.')
-    context.user_data.clear()
+                                    f'\r\nEnter name of the song to get lyrics and audio.'
+                                    f'You can enter piece of lyrics of the song and get full lyrics.'
+                                    f'Also you can log in with Spotify and get lyrics for your current playing song.')
+
     return ConversationHandler.END
 
 
