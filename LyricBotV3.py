@@ -58,16 +58,16 @@ def getAudio():
 
     video_url = videoSearch.result()['result'][0]['link']
 
-    filename = f"{artist} - {songname}.mp3"
+    filename = f"{artist} - {songname}"
     ydl_opts = {
-        'format': 'mp3/bestaudio/best',
-        'outtmpl': filename,
+        'format': 'm4a/bestaudio/best',
+        'outtmpl': filename
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download(video_url)
 
-    return open(f"{artist} - {songname}.mp3", 'rb')
+    return open(f"{artist} - {songname}", 'rb')
 
 
 async def songlyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -91,11 +91,11 @@ async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             .replace("Embed", "") \
             .replace(songname.title(), "", 1) \
 
-        if text[-1].isdigit():
-            text = text[:-1]
-
-        elif text[-2].isdigit():
+        if text[-2].isdigit():
             text = text[:-2]
+
+        elif text[-1].isdigit():
+            text = text[:-1]
 
         cover = song.song_art_image_thumbnail_url
 
