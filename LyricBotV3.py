@@ -51,21 +51,14 @@ TYPING_LYRIC, TOKEN = range(2)
 
 
 async def songlyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    url = "https://spotify-scraper.p.rapidapi.com/v1/track/search"
+    sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=client_id,
+                                                                             client_secret=client_secret))
 
-    querystring = {"name": f'{update.message.text}'}
-
-    headers = {
-        "X-RapidAPI-Key": "014eefd150mshba5089faf565a46p13f492jsn3b657ae08e0c",
-        "X-RapidAPI-Host": "spotify-scraper.p.rapidapi.com"
-    }
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    songinfo = json.loads(response.text)
+    result = sp.search(q=update.message.text, limit=1, type='track')
 
     global artist, songname
-    artist = songinfo['artists'][0]['name']
-    songname = songinfo['name']
+    artist = result['tracks']['items'][0]['artists'][0]['name']
+    songname = result['tracks']['items'][0]['name']
 
     return await get_text(update, context)
 
