@@ -168,7 +168,10 @@ async def fact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     response = requests.request("GET", url, headers=headers)
 
-    await update.message.reply_text(f'🧐🧐🧐🧐🧐\nFact: {json.loads(response.text)["Fact"].lower()}')
+    fact = json.loads(response.text)["Fact"]
+    fact = fact[0].lower() + fact[1:]
+
+    await update.message.reply_text(f'🧐🧐🧐🧐🧐\nFact: {fact}')
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
