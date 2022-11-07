@@ -262,7 +262,7 @@ def main() -> None:
     )
     application.add_handler(CommandHandler("done", done))
     application.add_handler(CommandHandler("Help", help))
-    application.add_handler(MessageHandler(filters.TEXT & (~ filters.COMMAND), songlyrics))
+    application.add_handler(MessageHandler(filters.TEXT & (~ filters.COMMAND) & (~ filters.Entity('url')), songlyrics))
     application.add_handler(conv_handler)
     application.run_polling()
 
