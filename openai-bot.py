@@ -34,37 +34,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-
-IMAGE, CHAT, CHOICE = range(3)
+IMAGE, CHAT = range(2)
 
 openai.api_key = openaiToken
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    reply_keyboard = [
-        ["Text"],
-        ['Image'],
-    ]
-    markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=True, input_field_placeholder='What do you need to generate?')
-
-    await update.message.reply_text(
-        "What do you need to generate?",
-        reply_markup=markup,
-    )
-    return CHOICE
+    await update.message.reply_text("/text to use text neuralink or /image to generate images")
+    return ConversationHandler.END
 
 
-async def choices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    choice = update.message.text
-    if choice == 'Text':
-        return CHAT
-    elif choice == 'Image':
-        return IMAGE
-
-
-async def chatgpt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Enter a request")
+async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Enter a request or /image to generate images")
     return CHAT
 
 
@@ -90,7 +71,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Enter a request for image generator")
+    await update.message.reply_text("Enter a request for image or /start")
     return IMAGE
 
 
@@ -112,28 +93,25 @@ async def get_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 if __name__ == '__main__':
-    application = Application.builder().token("TOKEN").build()
+    application = Application.builder().token("5560967942:AAGgMQFSrXJBOwZCvV01g_3uhad2pjGlMoI").build()
 
     conv_handler = ConversationHandler(
         entry_points=[
-            CommandHandler("start", start),
+            CommandHandler("text", text),
+            CommandHandler('image', image),
         ],
         states={
-            CHOICE: [
-                MessageHandler(filters.Regex("^(Text)$"), chatgpt),
-                MessageHandler(filters.Regex("^(Image)$"), image),
-            ],
             CHAT: [
-                MessageHandler(filters.Regex("^(Text)$"), chatgpt),
-                MessageHandler(filters.TEXT & (~ filters.COMMAND) & (~ filters.Regex('Text')), chat)
+                MessageHandler(filters.TEXT & (~ filters.COMMAND) & (~ filters.Regex('Image')), chat)
             ],
             IMAGE: [
                 MessageHandler(filters.Regex("^(Image)$"), image),
                 MessageHandler(filters.TEXT & (~ filters.COMMAND) & (~ filters.Regex('Image')), get_image)
             ],
         },
-        fallbacks=[CommandHandler("start", start)], allow_reentry=True,
+        fallbacks=[CommandHandler("text", text), CommandHandler("image", image)], allow_reentry=True,
     )
 
+    application.add_handler(CommandHandler('start', start))
     application.add_handler(conv_handler)
     application.run_polling()
