@@ -112,7 +112,7 @@ async def get_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 if __name__ == '__main__':
-    application = Application.builder().token("5560967942:AAGgMQFSrXJBOwZCvV01g_3uhad2pjGlMoI").build()
+    application = Application.builder().token("TOKEN").build()
 
     conv_handler = ConversationHandler(
         entry_points=[
